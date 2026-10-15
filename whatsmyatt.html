@@ -1,0 +1,725 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>WhatsApp Shift Hours</title>
+<style>
+/* Layout: single ledger column — dropzone + settings up top, employee summary cards,
+   then a filterable detail table and an anomalies panel. Identity: deep-teal "ledger"
+   accent on warm-cool paper, amber for things that need a look. */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --surface-2:#eaedea; --border:#d9dedb;
+  --ink:#191d1c; --muted:#5b6360; --faint:#8a918d;
+  --accent:#0f6e64; --accent-weak:#d6ebe7; --on-accent:#ffffff;
+  --good:#2f7d4f; --good-weak:#dcefe2; --warn:#a6591c; --warn-weak:#f6e6d4;
+  --bad:#b43f2f; --bad-weak:#f6ddd7; --bar:#0f6e64;
+  --shadow:0 1px 2px rgba(20,30,28,.06),0 6px 20px rgba(20,30,28,.05);
+  --r:14px; --r-sm:9px;
+  --sans:"Spline Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --disp:"Bricolage Grotesque",var(--sans);
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13161a; --surface:#1a1f23; --surface-2:#222a2e; --border:#2c353a;
+  --ink:#e8ecea; --muted:#9aa4a1; --faint:#737d79;
+  --accent:#43c8b9; --accent-weak:#13302d; --on-accent:#06201c;
+  --good:#5cbd83; --good-weak:#15301f; --warn:#d79a5a; --warn-weak:#2e2416;
+  --bad:#e3715f; --bad-weak:#311a16; --bar:#43c8b9;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#13161a; --surface:#1a1f23; --surface-2:#222a2e; --border:#2c353a;
+  --ink:#e8ecea; --muted:#9aa4a1; --faint:#737d79;
+  --accent:#43c8b9; --accent-weak:#13302d; --on-accent:#06201c;
+  --good:#5cbd83; --good-weak:#15301f; --warn:#d79a5a; --warn-weak:#2e2416;
+  --bad:#e3715f; --bad-weak:#311a16; --bar:#43c8b9;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+  -webkit-font-smoothing:antialiased;font-size:15px}
+.wrap{max-width:1080px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 56px}
+h1,h2,h3{font-family:var(--disp);font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--accent)}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:saturate(1.3) blur(10px);border-bottom:1px solid var(--border)}
+.head-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:11px}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--on-accent);
+  display:grid;place-items:center;flex:none}
+.logo svg{width:18px;height:18px}
+.title-wrap{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.title-wrap h1{font-size:1.02rem}
+.title-wrap .sub{font-size:.72rem;color:var(--muted)}
+.head-spacer{flex:1}
+.theme-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
+  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}
+.theme-btn svg{width:17px;height:17px}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+section{margin-top:22px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.sec-head h2{font-size:1.08rem}
+.sec-head .hint{font-size:.8rem;color:var(--muted)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+
+/* intro + dropzone */
+.intro{margin-top:20px}
+.lead{color:var(--muted);font-size:.92rem;margin:4px 0 16px;max-width:60ch}
+.drop{border:1.5px dashed var(--border);border-radius:var(--r);background:var(--surface);
+  padding:26px 20px;text-align:center;transition:border-color .15s,background .15s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-weak)}
+.drop .big{font-family:var(--disp);font-size:1.05rem;font-weight:600}
+.drop .small{color:var(--muted);font-size:.84rem;margin-top:3px}
+.drop .files{margin-top:10px;font-family:var(--mono);font-size:.76rem;color:var(--accent)}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn{border:1px solid var(--border);background:var(--surface-2);color:var(--ink);
+  padding:8px 13px;border-radius:9px;font-size:.84rem;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.06);color:var(--on-accent)}
+.btn svg{width:15px;height:15px}
+.btn.ghost{background:transparent}
+.privacy{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted)}
+.privacy svg{width:14px;height:14px;color:var(--good)}
+
+.sample-banner{display:none;align-items:center;gap:9px;margin-top:14px;padding:9px 13px;border-radius:var(--r-sm);
+  background:var(--warn-weak);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);
+  color:var(--warn);font-size:.83rem}
+.sample-banner.show{display:flex}
+.sample-banner svg{width:16px;height:16px;flex:none}
+.sample-banner b{font-weight:600}
+
+/* settings */
+details.settings{margin-top:14px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+details.settings>summary{list-style:none;cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:9px;
+  font-weight:500;font-size:.9rem}
+details.settings>summary::-webkit-details-marker{display:none}
+.chev{width:16px;height:16px;color:var(--muted);transition:transform .18s}
+details.settings[open] .chev{transform:rotate(90deg)}
+.settings-body{padding:4px 16px 18px;border-top:1px solid var(--border)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px 18px;margin-top:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.78rem;font-weight:600;color:var(--ink)}
+.field .desc{font-size:.72rem;color:var(--faint)}
+.field input[type=text],.field input[type=number],.field input[type=date],.field select{
+  font-family:inherit;font-size:.86rem;padding:8px 10px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg);color:var(--ink);width:100%}
+.field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.senders{margin-top:16px}
+.senders .shead{font-size:.78rem;font-weight:600;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--border);
+  border-radius:999px;background:var(--bg);font-size:.82rem;cursor:pointer;user-select:none}
+.chip input{accent-color:var(--accent);margin:0}
+.chip.off{opacity:.5}
+
+/* stat strip */
+.strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.stat{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:12px 14px}
+.stat .k{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat .v{font-family:var(--disp);font-size:1.5rem;font-weight:600;margin-top:2px}
+.stat .v small{font-size:.8rem;color:var(--muted);font-weight:500}
+
+/* employee cards */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.person{padding:16px;display:flex;flex-direction:column;gap:3px}
+.person .nm{font-family:var(--disp);font-weight:600;font-size:1.02rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.person .tot{font-family:var(--disp);font-size:2rem;font-weight:600;line-height:1.05;margin-top:4px}
+.person .tot small{font-size:.9rem;color:var(--muted);font-weight:500;margin-left:3px}
+.person .meta{font-size:.82rem;color:var(--muted)}
+.person .track{height:7px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:11px}
+.person .fill{height:100%;background:var(--bar);border-radius:999px}
+
+/* table */
+.table-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.table-tools select,.table-tools input[type=date]{font-family:inherit;font-size:.82rem;padding:7px 9px;
+  border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink)}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;
+  position:sticky;top:0;background:var(--surface);z-index:1}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface-2)}
+td.worked{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+td.worked small{font-weight:400;color:var(--muted);margin-left:5px}
+.emp-cell{font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:.74rem;font-weight:600}
+.pill.ok{background:var(--good-weak);color:var(--good)}
+.pill.open{background:var(--warn-weak);color:var(--warn)}
+.pill.flag{background:var(--bad-weak);color:var(--bad)}
+.pill svg{width:11px;height:11px}
+.daydot{font-size:.74rem;color:var(--faint);margin-left:7px}
+
+/* anomalies */
+.anoms{padding:4px 0}
+.anom{display:flex;gap:11px;padding:11px 16px;border-bottom:1px solid var(--border);font-size:.86rem;align-items:flex-start}
+.anom:last-child{border-bottom:none}
+.anom .ai{width:18px;height:18px;color:var(--warn);flex:none;margin-top:1px}
+.anom .who{font-weight:600}
+.anom .dt{font-family:var(--mono);color:var(--muted);font-size:.78rem}
+
+/* export panel */
+.export-panel{margin-top:12px;display:none}
+.export-panel.show{display:block}
+.export-panel textarea{width:100%;height:150px;font-family:var(--mono);font-size:.76rem;
+  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--ink);padding:11px;resize:vertical}
+.copied{font-size:.78rem;color:var(--good);font-weight:600;display:none}
+.copied.show{display:inline}
+
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);font-size:.78rem;color:var(--faint)}
+footer code{font-family:var(--mono);background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:.92em}
+.hidden{display:none!important}
+@media (max-width:560px){
+  .person .tot{font-size:1.7rem}
+  .head-in{padding-block:9px}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=Spline+Sans:wght@400;500;600&display=swap">
+
+<header>
+  <div class="head-in">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    </div>
+    <div class="title-wrap">
+      <h1>WhatsApp Shift Hours</h1>
+      <span class="sub">In / Out messages → working hours</span>
+    </div>
+    <div class="head-spacer"></div>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="intro">
+    <div class="eyebrow">Attendance from chat exports</div>
+    <p class="lead">Export each employee's WhatsApp chat (or one group chat) as a <b>.txt</b> file and drop it below. The tool reads every <span class="mono">In</span> / <span class="mono">Out</span> message and works out each person's hours per day. <span class="privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Nothing is uploaded — it all runs on this device.</span></p>
+
+    <div class="drop" id="drop">
+      <input type="file" id="fileInput" accept=".txt,text/plain" multiple hidden>
+      <div class="big">Drop WhatsApp .txt exports here</div>
+      <div class="small">or tap to choose files — you can add several at once</div>
+      <div class="files" id="fileList"></div>
+    </div>
+    <div class="row-btns">
+      <button class="btn ghost" id="pasteToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/></svg>
+        Paste text instead
+      </button>
+      <button class="btn ghost" id="sampleBtn">Load sample again</button>
+    </div>
+
+    <div class="card hidden" id="pasteCard" style="margin-top:12px;padding:14px">
+      <div class="field">
+        <label for="pasteArea">Paste an exported chat</label>
+        <textarea id="pasteArea" style="width:100%;height:120px;font-family:var(--mono);font-size:.78rem;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--ink);padding:10px;resize:vertical" placeholder="[15/10/2026, 9:02 AM] Priya: In&#10;[15/10/2026, 6:30 PM] Priya: Out"></textarea>
+      </div>
+      <div class="row-btns"><button class="btn primary" id="parsePaste">Read pasted text</button></div>
+    </div>
+
+    <div class="sample-banner" id="sampleBanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span><b>Showing sample data.</b> Drop your own export above to replace it.</span>
+    </div>
+
+    <details class="settings" id="settings">
+      <summary>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        Settings — keywords, date format, rounding, who to include
+      </summary>
+      <div class="settings-body">
+        <div class="grid">
+          <div class="field">
+            <label for="inKw">"In" words</label>
+            <input type="text" id="inKw" value="in">
+            <span class="desc">Comma-separated. Case doesn't matter (in, IN, iN all count).</span>
+          </div>
+          <div class="field">
+            <label for="outKw">"Out" words</label>
+            <input type="text" id="outKw" value="out">
+            <span class="desc">e.g. out, leaving, bye</span>
+          </div>
+          <div class="field">
+            <label for="mode">Match</label>
+            <select id="mode">
+              <option value="firstword">First word of the message</option>
+              <option value="exact">Whole message only</option>
+            </select>
+            <span class="desc">"First word" also catches "In ✅" or "out done".</span>
+          </div>
+          <div class="field">
+            <label for="dateFmt">Date format</label>
+            <select id="dateFmt">
+              <option value="auto">Auto-detect</option>
+              <option value="dmy">Day first (15/10/2026)</option>
+              <option value="mdy">Month first (10/15/2026)</option>
+              <option value="ymd">Year first (2026-10-15)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="round">Round each shift</label>
+            <select id="round">
+              <option value="0">Don't round</option>
+              <option value="5">To 5 minutes</option>
+              <option value="15">To 15 minutes</option>
+              <option value="30">To 30 minutes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="maxShift">Longest believable shift (hours)</label>
+            <input type="number" id="maxShift" value="16" min="1" max="24" step="1">
+            <span class="desc">Longer In→Out gaps are flagged, not counted (likely a missing "Out").</span>
+          </div>
+          <div class="field">
+            <label for="fromDate">From date (optional)</label>
+            <input type="date" id="fromDate">
+          </div>
+          <div class="field">
+            <label for="toDate">To date (optional)</label>
+            <input type="date" id="toDate">
+          </div>
+        </div>
+        <div class="senders" id="sendersWrap" hidden>
+          <div class="shead">Include these people</div>
+          <div class="chips" id="senderChips"></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div id="results"></div>
+
+  <footer>
+    Times are read exactly as they appear in the export, in your phone's local clock.
+    To export a chat in WhatsApp: open the chat → <code>⋮ / contact name</code> → <b>Export chat</b> → <b>Without media</b>.
+    A dangling <span class="mono">In</span> (no matching <span class="mono">Out</span>) or an over-long gap is listed under “Needs a look” rather than guessed at.
+  </footer>
+</div>
+
+<script>
+/* ===================== parser (validated with Node before shipping) ===================== */
+const INVISIBLE=/[‎‏‪-‮⁦-⁩﻿]/g;
+const WEIRD_SPACE=/[      ]/g;
+function cleanLine(l){return l.replace(INVISIBLE,'').replace(WEIRD_SPACE,' ').replace(/\r$/,'');}
+const IOS_RE=/^\[\s*([^\]]+?)\s*\]\s*([\s\S]*)$/;
+const AND_RE=/^(\d{1,4}[\/.\-]\d{1,2}[\/.\-]\d{1,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[APap]\.?\s?[Mm]\.?)?)\s+[-–—]\s+([\s\S]*)$/;
+function parseHeader(line){let m=line.match(IOS_RE);if(m)return{ts:m[1],rest:m[2]};m=line.match(AND_RE);if(m)return{ts:m[1],rest:m[2]};return null;}
+function splitSender(rest){const m=rest.match(/^([^:\n]{1,60}?):\s([\s\S]*)$/);return m?{sender:m[1].trim(),text:m[2]}:null;}
+function parseDateTime(ts,dayFirst){
+  const dm=ts.match(/(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4})/);
+  const tm=ts.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(!dm||!tm)return null;
+  const ap=ts.match(/([APap])\.?\s?[Mm]/);
+  let a=+dm[1],b=+dm[2],c=+dm[3],year,month,day;
+  if(dm[1].length===4){year=a;month=b;day=c;}
+  else{year=c<100?2000+c:c; if(dayFirst){day=a;month=b;}else{month=a;day=b;}}
+  let hour=+tm[1],min=+tm[2],sec=tm[3]?+tm[3]:0;
+  if(ap){const pm=/[Pp]/.test(ap[0]); if(pm&&hour<12)hour+=12; if(!pm&&hour===12)hour=0;}
+  if(month<1||month>12||day<1||day>31||hour>23||min>59)return null;
+  const d=new Date(year,month-1,day,hour,min,sec);
+  if(isNaN(d.getTime()))return null;
+  return{ms:d.getTime(),dateKey:`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`};
+}
+function detectDayFirst(lines){
+  let dayGt=false,monGt=false;
+  for(const raw of lines){const h=parseHeader(cleanLine(raw));if(!h)continue;
+    const dm=h.ts.match(/(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4})/);if(!dm||dm[1].length===4)continue;
+    if(+dm[1]>12)dayGt=true; if(+dm[2]>12)monGt=true;}
+  if(dayGt&&!monGt)return true; if(monGt&&!dayGt)return false; return null;
+}
+function normText(t){return t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();}
+function classify(text,inKw,outKw,mode){
+  const n=normText(text); if(!n)return null;
+  const first=n.split(' ')[0];
+  const hit=kw=>mode==='exact'?kw.includes(n):kw.includes(first);
+  if(hit(inKw))return'in'; if(hit(outKw))return'out'; return null;
+}
+function parseChat(text,opts){
+  opts=opts||{};
+  const lines=text.split('\n');
+  let dayFirst;
+  if(opts.dateFormat==='dmy')dayFirst=true;
+  else if(opts.dateFormat==='mdy')dayFirst=false;
+  else if(opts.dateFormat==='ymd')dayFirst=true;
+  else{const d=detectDayFirst(lines);dayFirst=d===null?true:d;}
+  const messages=[];
+  for(const raw of lines){
+    const line=cleanLine(raw);const h=parseHeader(line);
+    if(h){const dt=parseDateTime(h.ts,dayFirst);
+      if(dt){const s=splitSender(h.rest); if(s)messages.push({ms:dt.ms,dateKey:dt.dateKey,sender:s.sender,text:s.text}); continue;}}
+  }
+  return{messages,dayFirst};
+}
+function buildReport(messages,opts){
+  opts=opts||{};
+  const inKw=(opts.inKw||['in']).map(s=>s.toLowerCase().trim()).filter(Boolean);
+  const outKw=(opts.outKw||['out']).map(s=>s.toLowerCase().trim()).filter(Boolean);
+  const mode=opts.mode||'firstword';
+  const maxShiftMs=(opts.maxShiftHours||16)*3600000;
+  const roundMin=opts.roundMin||0;
+  const included=opts.included;
+  const from=opts.from||null, to=opts.to||null;
+  const bySender={};
+  for(const m of messages){
+    if(included&&!included.has(m.sender))continue;
+    if(from&&m.dateKey<from)continue; if(to&&m.dateKey>to)continue;
+    const kind=classify(m.text,inKw,outKw,mode); if(!kind)continue;
+    (bySender[m.sender]=bySender[m.sender]||[]).push({...m,kind});
+  }
+  const roundMs=ms=>roundMin>0?Math.round(ms/(roundMin*60000))*(roundMin*60000):ms;
+  const people=[],anomalies=[];
+  for(const sender of Object.keys(bySender)){
+    const evs=bySender[sender].sort((x,y)=>x.ms-y.ms);
+    const days={};let open=null;
+    for(const e of evs){
+      if(e.kind==='in'){ if(open)anomalies.push({sender,date:e.dateKey,reason:'Two “In” with no “Out” between — kept the first'}); else open=e; }
+      else{
+        if(!open){anomalies.push({sender,date:e.dateKey,reason:'“Out” with no matching “In”'});continue;}
+        let dur=e.ms-open.ms;const dk=open.dateKey;
+        const day=days[dk]=days[dk]||{segments:[],firstIn:open.ms,lastOut:e.ms};
+        day.firstIn=Math.min(day.firstIn,open.ms);day.lastOut=Math.max(day.lastOut,e.ms);
+        if(dur>maxShiftMs||dur<0)anomalies.push({sender,date:dk,reason:`Gap of ${(dur/3600000).toFixed(1)}h looks wrong (missing “Out”?) — not counted`});
+        else day.segments.push({inMs:open.ms,outMs:e.ms,dur:roundMs(dur)});
+        open=null;
+      }
+    }
+    if(open)anomalies.push({sender,date:open.dateKey,reason:'“In” with no matching “Out” — still clocked in?'});
+    const dayRows=Object.keys(days).sort().map(dk=>{const d=days[dk];
+      const worked=d.segments.reduce((s,x)=>s+x.dur,0);
+      return{date:dk,firstIn:d.firstIn,lastOut:d.lastOut,segments:d.segments,workedMs:worked,incomplete:d.segments.length===0};});
+    const totalMs=dayRows.reduce((s,r)=>s+r.workedMs,0);
+    const countedDays=dayRows.filter(r=>r.workedMs>0).length;
+    people.push({sender,dayRows,totalMs,countedDays,avgMs:countedDays?totalMs/countedDays:0});
+  }
+  people.sort((a,b)=>b.totalMs-a.totalMs);
+  return{people,anomalies};
+}
+
+/* ===================== sample ===================== */
+const SAMPLE=`13/10/2026, 00:01 - Messages and calls are end-to-end encrypted. Tap to learn more.
+13/10/2026, 08:58 - Boss: Morning team, mark your attendance please
+13/10/2026, 09:02 - Priya Nair: In
+13/10/2026, 13:30 - Priya Nair: out
+13/10/2026, 14:12 - Priya Nair: iN
+13/10/2026, 18:36 - Priya Nair: Out
+13/10/2026, 08:55 - Arjun Rao: in
+13/10/2026, 17:42 - Arjun Rao: OUT
+13/10/2026, 10:15 - Meena Iyer: IN
+got held up in traffic, sorry
+13/10/2026, 19:05 - Meena Iyer: out
+13/10/2026, 20:00 - Vikram Shetty: In
+14/10/2026, 06:04 - Vikram Shetty: Out
+14/10/2026, 09:08 - Priya Nair: In
+14/10/2026, 18:02 - Priya Nair: out
+14/10/2026, 09:00 - Arjun Rao: in
+14/10/2026, 13:15 - Arjun Rao: Out
+14/10/2026, 14:00 - Arjun Rao: In
+14/10/2026, 18:20 - Arjun Rao: out
+14/10/2026, 10:05 - Meena Iyer: in
+15/10/2026, 08:52 - Arjun Rao: IN
+15/10/2026, 17:30 - Arjun Rao: out
+15/10/2026, 20:00 - Vikram Shetty: in
+16/10/2026, 06:10 - Vikram Shetty: Out`;
+
+/* ===================== app ===================== */
+const $=id=>document.getElementById(id);
+const state={rawText:SAMPLE,isSample:true,fileNames:[],include:{}};
+const WEEKDAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function hoursDec(ms){return (ms/3600000).toFixed(2);}
+function hm(ms){const t=Math.round(ms/60000);const h=Math.floor(t/60),m=t%60;return `${h}h${m?(' '+m+'m'):''}`;}
+function clock(ms){const d=new Date(ms);let h=d.getHours(),m=d.getMinutes();const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${ap}`;}
+function prettyDate(key){const [y,mo,da]=key.split('-').map(Number);const d=new Date(y,mo-1,da);return `${String(da).padStart(2,'0')} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo-1]}`;}
+function weekday(key){const [y,mo,da]=key.split('-').map(Number);return WEEKDAY[new Date(y,mo-1,da).getDay()];}
+
+function readOpts(){
+  return{
+    inKw:$('inKw').value.split(','),
+    outKw:$('outKw').value.split(','),
+    mode:$('mode').value,
+    dateFormat:$('dateFmt').value,
+    roundMin:+$('round').value,
+    maxShiftHours:+$('maxShift').value||16,
+    from:$('fromDate').value||null,
+    to:$('toDate').value||null,
+  };
+}
+
+let lastReport=null;
+function run(){
+  const o=readOpts();
+  const {messages}=parseChat(state.rawText,o);
+
+  // which senders have any in/out under current keywords (ignoring include filter)
+  const probe=buildReport(messages,{inKw:o.inKw,outKw:o.outKw,mode:o.mode,maxShiftHours:o.maxShiftHours});
+  const senders=probe.people.map(p=>p.sender);
+  senders.forEach(s=>{ if(!(s in state.include)) state.include[s]=true; });
+  renderSenders(senders);
+
+  const included=new Set(senders.filter(s=>state.include[s]));
+  const rep=buildReport(messages,{...o,included});
+  lastReport=rep;
+  renderResults(rep,messages);
+}
+
+function renderSenders(senders){
+  const wrap=$('sendersWrap'),chips=$('senderChips');
+  if(!senders.length){wrap.hidden=true;return;}
+  wrap.hidden=false;
+  chips.innerHTML='';
+  senders.forEach(s=>{
+    const on=state.include[s]!==false;
+    const lab=document.createElement('label');
+    lab.className='chip'+(on?'':' off');
+    lab.innerHTML=`<input type="checkbox" ${on?'checked':''}><span></span>`;
+    lab.querySelector('span').textContent=s;
+    lab.querySelector('input').addEventListener('change',e=>{state.include[s]=e.target.checked;run();});
+    chips.appendChild(lab);
+  });
+}
+
+function pill(row,hasFlag){
+  if(hasFlag)return `<span class="pill flag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 17h.01"/></svg>Check</span>`;
+  if(row.incomplete)return `<span class="pill open">Open — no Out</span>`;
+  return `<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>OK</span>`;
+}
+
+function renderResults(rep,messages){
+  const R=$('results');
+  if(!rep.people.length){
+    R.innerHTML=`<section><div class="card empty">No <b>In</b> / <b>Out</b> messages found yet. Drop an export above, or check the keywords in Settings.</div></section>`;
+    return;
+  }
+  const maxTot=Math.max(...rep.people.map(p=>p.totalMs),1);
+  const grandMs=rep.people.reduce((s,p)=>s+p.totalMs,0);
+  const allDates=[];rep.people.forEach(p=>p.dayRows.forEach(r=>allDates.push(r.date)));
+  allDates.sort();
+  const rangeTxt=allDates.length?`${prettyDate(allDates[0])} – ${prettyDate(allDates[allDates.length-1])}`:'—';
+
+  // flagged day set
+  const flagDays=new Set(rep.anomalies.map(a=>a.sender+'|'+a.date));
+
+  let html='';
+  // stat strip
+  html+=`<section><div class="strip">
+    <div class="stat"><div class="k">People</div><div class="v num">${rep.people.length}</div></div>
+    <div class="stat"><div class="k">Total hours</div><div class="v num">${hoursDec(grandMs)}<small> h</small></div></div>
+    <div class="stat"><div class="k">Dates covered</div><div class="v" style="font-size:1.05rem">${rangeTxt}</div></div>
+    <div class="stat"><div class="k">Needs a look</div><div class="v num" style="color:${rep.anomalies.length?'var(--warn)':'var(--good)'}">${rep.anomalies.length}</div></div>
+  </div></section>`;
+
+  // people cards
+  html+=`<section><div class="sec-head"><h2>By employee</h2><span class="hint">total hours over the period</span></div><div class="people">`;
+  rep.people.forEach(p=>{
+    html+=`<div class="card person">
+      <div class="nm" title="${esc(p.sender)}">${esc(p.sender)}</div>
+      <div class="tot num">${hoursDec(p.totalMs)}<small>h</small></div>
+      <div class="meta">${p.countedDays} day${p.countedDays===1?'':'s'} · avg ${hoursDec(p.avgMs)} h/day</div>
+      <div class="track"><div class="fill" style="width:${Math.max(3,p.totalMs/maxTot*100)}%"></div></div>
+    </div>`;
+  });
+  html+=`</div></section>`;
+
+  // detail table
+  const empOptions=['<option value="">All people</option>'].concat(rep.people.map(p=>`<option value="${esc(p.sender)}">${esc(p.sender)}</option>`)).join('');
+  html+=`<section>
+    <div class="sec-head"><h2>Daily detail</h2></div>
+    <div class="table-tools">
+      <select id="empFilter">${empOptions}</select>
+      <button class="btn ghost" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg>Export CSV</button>
+    </div>
+    <div class="export-panel" id="exportPanel">
+      <textarea id="csvText" readonly></textarea>
+      <div class="row-btns">
+        <button class="btn primary" id="copyCsv">Copy</button>
+        <button class="btn" id="dlCsv">Download .csv</button>
+        <span class="copied" id="copied">Copied</span>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Date</th><th>First In</th><th>Last Out</th><th>Shifts</th><th>Worked</th><th>Status</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>`;
+
+  // anomalies
+  if(rep.anomalies.length){
+    html+=`<section><div class="sec-head"><h2>Needs a look</h2><span class="hint">${rep.anomalies.length} item${rep.anomalies.length===1?'':'s'} — not counted automatically</span></div>
+      <div class="card anoms">`;
+    rep.anomalies.slice().sort((a,b)=>(a.sender+a.date).localeCompare(b.sender+b.date)).forEach(a=>{
+      html+=`<div class="anom"><svg class="ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div><span class="who">${esc(a.sender)}</span> <span class="dt">${prettyDate(a.date)}</span><br>${esc(a.reason)}</div></div>`;
+    });
+    html+=`</div></section>`;
+  }
+
+  R.innerHTML=html;
+
+  // build rows (store for filtering)
+  const rows=[];
+  rep.people.forEach(p=>p.dayRows.forEach(r=>rows.push({sender:p.sender,...r})));
+  rows.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:a.sender.localeCompare(b.sender));
+
+  function drawRows(filter){
+    const tb=$('tbody');tb.innerHTML='';
+    rows.filter(r=>!filter||r.sender===filter).forEach(r=>{
+      const flagged=flagDays.has(r.sender+'|'+r.date);
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td class="emp-cell">${esc(r.sender)}</td>
+        <td>${prettyDate(r.date)}<span class="daydot">${weekday(r.date)}</span></td>
+        <td class="mono">${r.incomplete?'—':clock(r.firstIn)}</td>
+        <td class="mono">${r.incomplete?'—':clock(r.lastOut)}</td>
+        <td class="num">${r.segments.length||'—'}</td>
+        <td class="worked">${r.workedMs?hoursDec(r.workedMs):'—'}${r.workedMs?`<small>${hm(r.workedMs)}</small>`:''}</td>
+        <td>${pill(r,flagged&&!r.workedMs)}</td>`;
+      tb.appendChild(tr);
+    });
+    if(!tb.children.length)tb.innerHTML=`<tr><td colspan="7" style="color:var(--muted)">No rows for this filter.</td></tr>`;
+  }
+  drawRows('');
+  $('empFilter').addEventListener('change',e=>drawRows(e.target.value));
+
+  // export
+  $('exportBtn').addEventListener('click',()=>{
+    $('csvText').value=buildCSV(rep,rows);
+    $('exportPanel').classList.toggle('show');
+  });
+  $('copyCsv').addEventListener('click',async()=>{
+    const t=$('csvText');
+    try{await navigator.clipboard.writeText(t.value);}
+    catch(e){t.focus();t.select();try{document.execCommand('copy');}catch(_){}}
+    const c=$('copied');c.classList.add('show');setTimeout(()=>c.classList.remove('show'),1500);
+  });
+  $('dlCsv').addEventListener('click',async()=>{
+    const csv=$('csvText').value||buildCSV(rep,rows);
+    let saved=false;
+    // Hosted artifact: route through the downloads capability (viewer confirms the save).
+    try{
+      const dl=(window.claude&&claude.use)?await claude.use('downloads'):null;
+      if(dl){ await dl.save({filename:'shift-hours.csv',data:csv}); saved=true; }
+    }catch(e){ if(e&&e.code==='declined') return; }
+    // Standalone .html opened from disk: a normal browser download.
+    if(!saved){
+      try{
+        const blob=new Blob([csv],{type:'text/csv'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download='shift-hours.csv';
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+      }catch(_){}
+    }
+  });
+}
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function csvCell(s){s=String(s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function buildCSV(rep,rows){
+  const L=[];
+  L.push('Summary');
+  L.push(['Employee','Total hours','Days','Avg hours/day'].join(','));
+  rep.people.forEach(p=>L.push([csvCell(p.sender),hoursDec(p.totalMs),p.countedDays,hoursDec(p.avgMs)].join(',')));
+  L.push('');
+  L.push('Daily detail');
+  L.push(['Employee','Date','Weekday','First In','Last Out','Shifts','Worked (hours)','Worked (h:m)','Status'].join(','));
+  rows.forEach(r=>{
+    const status=r.incomplete?'Open - no Out':'OK';
+    L.push([csvCell(r.sender),r.date,weekday(r.date),r.incomplete?'':clock(r.firstIn),r.incomplete?'':clock(r.lastOut),
+      r.segments.length||0,r.workedMs?hoursDec(r.workedMs):'0',r.workedMs?hm(r.workedMs):'',status].join(','));
+  });
+  if(rep.anomalies.length){
+    L.push('');L.push('Needs a look');
+    L.push(['Employee','Date','Issue'].join(','));
+    rep.anomalies.forEach(a=>L.push([csvCell(a.sender),a.date,csvCell(a.reason)].join(',')));
+  }
+  return L.join('\n');
+}
+
+/* ---- file handling ---- */
+function handleFiles(fileList){
+  const files=[...fileList].filter(f=>/\.txt$/i.test(f.name)||f.type==='text/plain');
+  if(!files.length){files.push(...fileList);} // accept anyway
+  let pending=files.length,texts=[],names=[];
+  if(!pending)return;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{texts.push(r.result);names.push(f.name);
+      if(--pending===0){
+        state.rawText=texts.join('\n');state.isSample=false;state.fileNames=names;state.include={};
+        $('fileList').textContent=names.join('  ·  ');
+        $('sampleBanner').classList.remove('show');
+        run();
+        $('results').scrollIntoView({behavior:'smooth',block:'start'});
+      }};
+    r.onerror=()=>{if(--pending===0)run();};
+    r.readAsText(f);
+  });
+}
+
+/* ---- wiring ---- */
+const drop=$('drop'),fileInput=$('fileInput');
+drop.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{if(e.dataTransfer?.files?.length)handleFiles(e.dataTransfer.files);});
+
+$('pasteToggle').addEventListener('click',()=>$('pasteCard').classList.toggle('hidden'));
+$('parsePaste').addEventListener('click',()=>{
+  const v=$('pasteArea').value.trim();if(!v)return;
+  state.rawText=v;state.isSample=false;state.include={};state.fileNames=['pasted text'];
+  $('fileList').textContent='pasted text';
+  $('sampleBanner').classList.remove('show');
+  run();$('results').scrollIntoView({behavior:'smooth',block:'start'});
+});
+$('sampleBtn').addEventListener('click',()=>{
+  state.rawText=SAMPLE;state.isSample=true;state.include={};state.fileNames=[];
+  $('fileList').textContent='';$('sampleBanner').classList.add('show');
+  run();
+});
+
+// settings -> recompute
+const SETTING_IDS=['inKw','outKw','mode','dateFmt','round','maxShift','fromDate','toDate'];
+let deb;
+SETTING_IDS.forEach(id=>{
+  const el=$(id);const ev=(el.tagName==='SELECT'||el.type==='date')?'change':'input';
+  el.addEventListener(ev,()=>{saveSettings();clearTimeout(deb);deb=setTimeout(run,220);});
+});
+
+// theme toggle (per-viewer, best effort)
+function applyTheme(t){ if(t)document.documentElement.setAttribute('data-theme',t); else document.documentElement.removeAttribute('data-theme'); }
+$('themeBtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const isDark=cur?cur==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const next=isDark?'light':'dark';applyTheme(next);
+  try{localStorage.setItem('wsh-theme',next);}catch(e){}
+});
+
+// persist settings (per-viewer convenience)
+function saveSettings(){try{const o={};SETTING_IDS.forEach(id=>o[id]=$(id).value);localStorage.setItem('wsh-settings',JSON.stringify(o));}catch(e){}}
+function loadSettings(){try{
+  const t=localStorage.getItem('wsh-theme');if(t)applyTheme(t);
+  const o=JSON.parse(localStorage.getItem('wsh-settings')||'null');
+  if(o)SETTING_IDS.forEach(id=>{if(o[id]!=null&&$(id))$(id).value=o[id];});
+}catch(e){}}
+
+loadSettings();
+$('sampleBanner').classList.add('show');
+run();
+</script>
